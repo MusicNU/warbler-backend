@@ -15,5 +15,4 @@ def test_connection():
 
     r = requests.get(APP_URL, timeout=3)
 
-
     assert r.status_code == 200, f"Expected 200 from {APP_URL}, got {r.status_code}"
