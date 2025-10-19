@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 import os
 import requests
 
-
 load_dotenv()
 
 APP_URL = os.getenv("API_URL", "http://127.0.0.1:5000/")
