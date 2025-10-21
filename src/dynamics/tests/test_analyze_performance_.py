@@ -1,4 +1,4 @@
-from feedback import rms_note_by_note, get_dynamics, get_tempos, dynamic_to_rms, analyze_performance
+from ..feedback import rms_note_by_note, get_dynamics, get_tempos, dynamic_to_rms, analyze_performance
 import music21, librosa
 import numpy as np
 from music21 import converter
