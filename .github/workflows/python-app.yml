@@ -28,8 +28,8 @@ jobs:
         # start Flask in background on port 5000
         python -m flask --app src/api/main.py run --host=127.0.0.1 --port=5000 &
         FLASK_PID=$!
-        # wait up to 15s for the app to respond
-        for i in $(seq 1 15); do
+        # wait up to 60s for the app to respond
+        for i in $(seq 1 60); do
           if curl -sSf http://127.0.0.1:5000/ >/dev/null; then
             echo "Flask is up"
             break
