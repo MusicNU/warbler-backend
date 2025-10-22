@@ -26,18 +26,18 @@ jobs:
     - name: Start Flask (background) and wait for readiness
       run: |
         # start Flask in background on port 5000
-        flask --app src/api/main.py --debug run --host=127.0.0.1 --port=5000 &
+        flask --app src/api/main.py run --host=127.0.0.1 --port=5000 &
         FLASK_PID=$!
         # wait up to 60s for the app to respond
         for i in $(seq 1 60); do
-          if curl -sSf http://127.0.0.1:5000/ >/dev/null; then
+          if curl -sSf http://127.0.0.1:5000/backend-health >/dev/null; then
             echo "Flask is up"
             break
           fi
           sleep 1
         done
         # optionally fail if not up
-        if ! curl -sSf http://127.0.0.1:5000/ >/dev/null; then
+        if ! curl -sSf http://127.0.0.1:5000/backend-health >/dev/null; then
           echo "Flask did not start in time" >&2
           kill $FLASK_PID || true
           exit 1
