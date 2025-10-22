@@ -11,7 +11,7 @@
    ```
 3. Run the Flask application:
    ```
-   flask --app src/api/main.py run
+   flask --app src/api/main.py --debug run
    ```
 ## Running unit tests
 To run the unit tests, use the following command:

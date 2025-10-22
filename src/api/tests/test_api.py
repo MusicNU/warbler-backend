@@ -67,13 +67,14 @@ def test_upload_score_and_check_status_integration():
 
     assert r.status_code == 200, f"Expected success for POST request of uploading {TEST_SCORE_PATH} to {APP_UPLOAD_URL}, got status code {r.status_code}"
 
-    # r_json = r.json()
-    # score_id = r_json.get("id", None)
+    r_json = r.json()
+    score_id = r_json.get("id", None)
 
-    # assert "id" in r_json.keys(), f"Expected response JSON to contain 'id' key, the keys are actually just {r_json.keys()}"
+    assert "id" in r_json.keys(), f"Expected response JSON to contain 'id' key, the keys are actually just {r_json.keys()}"
 
-    # assert check_is_valid_uuid(score_id), f"Expected response value for key 'id' to be a valid UUID, got {score_id} which is not valid uuid according to check_is_valid_uuid() function"
+    assert check_is_valid_uuid(score_id), f"Expected response value for key 'id' to be a valid UUID, got {score_id} which is not valid uuid according to check_is_valid_uuid() function"
 
-    # r = requests.get(APP_SCORE_STATUS, params={"id": score_id})
+    r2 = requests.get(APP_SCORE_STATUS, params={"id": score_id})
 
-    # assert r.status_code == 200, f"Expected success for GET request to {AWS_SCORE_STATUS_URL} providing id={score_id} in params, got status code {r.status_code}"
+    assert r2.status_code == 200, f"Expected success for GET request to {APP_SCORE_STATUS} providing id={score_id} in params, got status code {r2.status_code}"
+
