@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+env:
+  API_URL: ${{ secrets.API_URL }}
+  AUDIVERIS_API_URL: ${{ secrets.AUDIVERIS_API_URL }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
