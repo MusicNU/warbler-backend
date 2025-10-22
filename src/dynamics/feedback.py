@@ -5,7 +5,7 @@ from pathlib import Path
 
 dynamic_to_rms: dict[str, int] = {
     "pp": -40, "p": -30, "mp": -25,
-    "mf": -20, "f": -10, "ff": 0, 
+    "mf": -20, "f": -10, "ff": 0,
     "rest": -80,        # setting rest db to -80
     "default": -20      # if no dynamic is given, default sets to -20db
 }   
