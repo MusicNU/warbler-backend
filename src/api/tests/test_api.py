@@ -3,12 +3,13 @@ import os, time
 import requests
 import pathlib
 from ..modules import check_is_valid_uuid
-from ..main import AWS_URL, AWS_UPLOAD_URL, APP_AWS_HEALTH_URL, APP_HEALTH_URL, APP_UPLOAD_PDF_URL, APP_SCORE_STATUS_URL, APP_MXL_DOWNLOAD_URL
+from ..main import AWS_URL, AWS_UPLOAD_URL, APP_AWS_HEALTH_URL, APP_HEALTH_URL, APP_UPLOAD_PDF_URL, APP_SCORE_STATUS_URL, APP_MXL_DOWNLOAD_URL, APP_UPLOAD_WAV_URL
 
 load_dotenv()
 
 TEST_MATERIALS_DIR = pathlib.Path(__file__).resolve().parent / "test_materials"
 TEST_SCORE_PATH = TEST_MATERIALS_DIR / "mozart.pdf"
+TEST_WAV_PATH = TEST_MATERIALS_DIR / "test.wav"
 
 def test_pytest():
     assert 4 == 4
@@ -113,4 +114,13 @@ def test_download_mxl_file():
     except Exception as e:
         print(f"Error: {str(e)}")
 
+def test_upload_wav_endpoint():
+    """Integration test for the /upload/wav endpoint in src/api/main.py"""
 
+    file = {"file": open(TEST_WAV_PATH, "rb")}
+
+    r = requests.post(APP_UPLOAD_WAV_URL, files=file)
+
+    assert r.status_code == 200, f"Expected success for POST request to {APP_UPLOAD_WAV_URL}, got status code {r.status_code}"
+
+    

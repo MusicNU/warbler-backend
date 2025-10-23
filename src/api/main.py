@@ -63,19 +63,12 @@ def upload_score():
     
 @app.route("/upload/wav", methods=["POST"])
 def upload_wav():
-    """Uploads a WAV file to Audiveris for processing."""
-    if "file" not in flask.request.files:
-        return "Key 'file' with file data is required to upload", 400
-    try:
-        uploaded_wav = flask.request.files["file"]
-        files = {"file": (uploaded_wav.filename or "score.wav", uploaded_wav.stream, uploaded_wav.content_type or "audio/wav")}
-        r = requests.post(AWS_UPLOAD_URL, files=files)
-        try:
-            return r.json(), r.status_code
-        except:
-            return r.text, r.status_code
-    except Exception as e:
-        return {"Error": str(e)}, 503
+    """Uploads a WAV file to S3."""
+
+    for bucket in s3.buckets.all():
+        print(bucket.name)
+
+
 
 @app.route("/score-status")
 def get_score_status():
