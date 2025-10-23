@@ -9,9 +9,10 @@ load_dotenv()
 
 APP_URL = os.getenv("API_URL", "http://127.0.0.1:5000")
 APP_AWS_HEALTH = APP_URL + "/aws-health"
-APP_HEALTH = APP_URL + "/backend-health"
+APP_HEALTH = APP_URL + "/app-health"
 APP_UPLOAD_URL = APP_URL + "/upload"
 APP_SCORE_STATUS = APP_URL + "/status"
+APP_SCORE_DOWNLOAD = APP_URL + "/download"
 
 TEST_MATERIALS_DIR = pathlib.Path(__file__).resolve().parent / "test_materials"
 TEST_SCORE_PATH = TEST_MATERIALS_DIR / "mozart.pdf"
@@ -83,8 +84,11 @@ def test_download_mxl_file():
 
     file = {"file": open(TEST_SCORE_PATH, "rb")}
     r = requests.post(APP_UPLOAD_URL, files=file)
-    r_json = r.json()
-    score_id = r_json.get("id", None)
+    try:
+        r_json = r.json()
+        score_id = r_json.get("id", None)
+    except Exception as e:
+        return {"Error": f"Tried uploading score but received {str(e)}"}, 503
 
     while True:
         time.sleep(1)
@@ -104,5 +108,14 @@ def test_download_mxl_file():
     
     print("No longer processing, status of pdf to mxl score conversion: ", status_json)
 
-    
+    download_request = requests.get(APP_SCORE_DOWNLOAD, params={"id": score_id})
 
+    try:
+        content_type = download_request.headers["Content-Type"]
+        content_disposition = download_request.headers["Content-Disposition"]
+
+        assert content_type == "application/vnd.recordare.musicxml"
+
+        assert "attachment;" in content_disposition
+    except Exception as e:
+        print(f"Error: {str(e)}")
