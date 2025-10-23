@@ -3,15 +3,30 @@ import os
 import dotenv
 import requests
 import io
+import boto3
 
 dotenv.load_dotenv()
 
 app = flask.Flask(__name__)
 
+# Endpoints for this API
+APP_URL = os.getenv("API_URL", "http://127.0.0.1:5000")
+APP_AWS_HEALTH_URL = APP_URL + "/aws-health"
+APP_HEALTH_URL = APP_URL + "/app-health"
+APP_UPLOAD_PDF_URL = APP_URL + "/upload/pdf"
+APP_UPLOAD_WAV_URL = APP_URL + "/upload/wav"
+APP_SCORE_STATUS_URL = APP_URL + "/score-status"
+APP_MXL_DOWNLOAD_URL = APP_URL + "/download/mxl"
+APP_WAV_DOWNLOAD_URL = APP_URL + "/download/wav"
+APP_ANALYZE_PERFORMANCE_URL = APP_URL + "/analyze-performance"
+
+# Endpoints for AWS audiveris hosting (used internally here by this API, not to be used directly by clients. Instead, use the endpoints above)
 AWS_URL = os.getenv("AUDIVERIS_API_URL", "Failed to find AWS endpoint")
 AWS_UPLOAD_URL = AWS_URL + "/upload"
 AWS_SCORE_STATUS_URL = AWS_URL + "/status/"
 AWS_GET_MXL_URL = AWS_URL + "/download/"
+
+s3 = boto3.resource('s3')
 
 @app.route("/app-health")
 def backend_health_check():
@@ -27,7 +42,7 @@ def aws_health_check():
     except Exception as e:
         return {"Error": str(e)}, 503
 
-@app.route("/upload", methods=["POST"])
+@app.route("/upload/pdf", methods=["POST"])
 def upload_score():
     """Uploads score to Audiveris. The score will then enter the 'processing' phase, where it will be converted from a pdf to mxl file
     Expects a binary file in pdf format as input. The pdf is expected to be a score, otherwise the the download endpoint will likely fail
@@ -46,7 +61,23 @@ def upload_score():
     except Exception as e:
         return {"Error": str(e)}, 503
     
-@app.route("/status")
+@app.route("/upload/wav", methods=["POST"])
+def upload_wav():
+    """Uploads a WAV file to Audiveris for processing."""
+    if "file" not in flask.request.files:
+        return "Key 'file' with file data is required to upload", 400
+    try:
+        uploaded_wav = flask.request.files["file"]
+        files = {"file": (uploaded_wav.filename or "score.wav", uploaded_wav.stream, uploaded_wav.content_type or "audio/wav")}
+        r = requests.post(AWS_UPLOAD_URL, files=files)
+        try:
+            return r.json(), r.status_code
+        except:
+            return r.text, r.status_code
+    except Exception as e:
+        return {"Error": str(e)}, 503
+
+@app.route("/score-status")
 def get_score_status():
     """Check the status of a PREVIOUSLY uploaded score. 
 
@@ -62,7 +93,6 @@ def get_score_status():
         return "Key 'id' with score ID of a recently uploaded score is required to inspect the status (we don't know which score you want to check!)", 400
 
     try:
-        print(f"Received request args: {score_id}")
         r = requests.get(AWS_SCORE_STATUS_URL + str(score_id))
         print(f"Sent request to {r.url}")
         print(f"Resulting text: {r.text}")
@@ -73,7 +103,7 @@ def get_score_status():
     except Exception as e:
         return {"Error": str(e)}, 503
 
-@app.route("/download")
+@app.route("/download/mxl")
 def download_score():
     """
     Returns the .mxl file for the previously uploaded pdf. 
@@ -97,4 +127,24 @@ def download_score():
     except Exception as e:
         return {"Error": str(e)}, 503
     
-@app.route()
+@app.route("/download/wav")
+def download_wav():
+    """
+    Returns the .wav file for the previously uploaded wav. 
+    Note you must have used the upload endpoint to have uploaded the wav already
+    The content body contains the binary for the wav file
+    """
+    score_id = flask.request.args.get("id", None)
+    if score_id is None:
+        return "Key 'id' with score ID of a recently uploaded wav is required to download the processed wav", 400
+    return "Not yet implemented", 501
+
+@app.route("/analyze-performance", methods=["POST"])
+def analyze_performance():
+    """
+    Takes in uploaded wav and mxl file and returns analysis of performance
+    
+    Kind of the the entire point of this API
+    """
+    # if "file" not in flask.request.files
+    return "Not yet implemented", 501

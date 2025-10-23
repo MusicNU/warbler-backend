@@ -3,16 +3,9 @@ import os, time
 import requests
 import pathlib
 from ..modules import check_is_valid_uuid
-from ..main import AWS_URL, AWS_UPLOAD_URL, AWS_SCORE_STATUS_URL
+from ..main import AWS_URL, AWS_UPLOAD_URL, APP_AWS_HEALTH_URL, APP_HEALTH_URL, APP_UPLOAD_PDF_URL, APP_SCORE_STATUS_URL, APP_MXL_DOWNLOAD_URL
 
 load_dotenv()
-
-APP_URL = os.getenv("API_URL", "http://127.0.0.1:5000")
-APP_AWS_HEALTH = APP_URL + "/aws-health"
-APP_HEALTH = APP_URL + "/app-health"
-APP_UPLOAD_URL = APP_URL + "/upload"
-APP_SCORE_STATUS = APP_URL + "/status"
-APP_SCORE_DOWNLOAD = APP_URL + "/download"
 
 TEST_MATERIALS_DIR = pathlib.Path(__file__).resolve().parent / "test_materials"
 TEST_SCORE_PATH = TEST_MATERIALS_DIR / "mozart.pdf"
@@ -23,9 +16,9 @@ def test_pytest():
 def test_connection():
     """Simple integration test: ensure Flask backend responds at health check URL."""
 
-    r = requests.get(APP_HEALTH, timeout=3)
+    r = requests.get(APP_HEALTH_URL, timeout=3)
 
-    assert r.status_code == 200, f"Expected 200 from {APP_HEALTH}, got {r.status_code}"
+    assert r.status_code == 200, f"Expected 200 from {APP_HEALTH_URL}, got {r.status_code}"
 
 def test_aws_connection():
     """Simple integration test: ensure AWS Audiveris backend responds at health check URL."""
@@ -40,8 +33,8 @@ def test_audiveris_post_error():
 
 def test_aws_health_check():
     """Integration test whether the AWS hosted endpiont is available"""
-    r = requests.get(APP_AWS_HEALTH)
-    assert r.status_code == 200, f"Expected 200 status code for GET request to {APP_AWS_HEALTH}, got {r.status_code}"
+    r = requests.get(APP_AWS_HEALTH_URL)
+    assert r.status_code == 200, f"Expected 200 status code for GET request to {APP_AWS_HEALTH_URL}, got {r.status_code}"
 
 
 def test_audiveris_post_correct():
@@ -64,9 +57,9 @@ def test_upload_score_and_check_status_integration():
 
     file = {"file": open(TEST_SCORE_PATH, "rb")}
 
-    r = requests.post(APP_UPLOAD_URL, files=file)
+    r = requests.post(APP_UPLOAD_PDF_URL, files=file)
 
-    assert r.status_code == 200, f"Expected success for POST request of uploading {TEST_SCORE_PATH} to {APP_UPLOAD_URL}, got status code {r.status_code}"
+    assert r.status_code == 200, f"Expected success for POST request of uploading {TEST_SCORE_PATH} to {APP_UPLOAD_PDF_URL}, got status code {r.status_code}"
 
     r_json = r.json()
     score_id = r_json.get("id", None)
@@ -75,15 +68,15 @@ def test_upload_score_and_check_status_integration():
 
     assert check_is_valid_uuid(score_id), f"Expected response value for key 'id' to be a valid UUID, got {score_id} which is not valid uuid according to check_is_valid_uuid() function"
 
-    r2 = requests.get(APP_SCORE_STATUS, params={"id": score_id})
+    r2 = requests.get(APP_SCORE_STATUS_URL, params={"id": score_id})
 
-    assert r2.status_code == 200, f"Expected success for GET request to {APP_SCORE_STATUS} providing id={score_id} in params, got status code {r2.status_code}"
+    assert r2.status_code == 200, f"Expected success for GET request to {APP_SCORE_STATUS_URL} providing id={score_id} in params, got status code {r2.status_code}"
 
 def test_download_mxl_file():
     """Integration test which uses /upload, /status, and /download and confirms response has mxl file""" 
 
     file = {"file": open(TEST_SCORE_PATH, "rb")}
-    r = requests.post(APP_UPLOAD_URL, files=file)
+    r = requests.post(APP_UPLOAD_PDF_URL, files=file)
     try:
         r_json = r.json()
         score_id = r_json.get("id", None)
@@ -93,9 +86,9 @@ def test_download_mxl_file():
     while True:
         time.sleep(1)
         try:
-            request_status = requests.get(APP_SCORE_STATUS, params={"id": score_id})
+            request_status = requests.get(APP_SCORE_STATUS_URL, params={"id": score_id})
 
-            assert request_status.status_code == 200, f"Expected success for GET request to {APP_SCORE_STATUS} providing id={score_id} in params, got status code {request_status.status_code}"
+            assert request_status.status_code == 200, f"Expected success for GET request to {APP_SCORE_STATUS_URL} providing id={score_id} in params, got status code {request_status.status_code}"
 
             status_json = request_status.json()
             if "status" not in status_json or status_json["status"] != "processing":
@@ -108,7 +101,7 @@ def test_download_mxl_file():
     
     print("No longer processing, status of pdf to mxl score conversion: ", status_json)
 
-    download_request = requests.get(APP_SCORE_DOWNLOAD, params={"id": score_id})
+    download_request = requests.get(APP_MXL_DOWNLOAD_URL, params={"id": score_id})
 
     try:
         content_type = download_request.headers["Content-Type"]
@@ -119,3 +112,5 @@ def test_download_mxl_file():
         assert "attachment;" in content_disposition
     except Exception as e:
         print(f"Error: {str(e)}")
+
+
