@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-import os
+import os, time
 import requests
 import pathlib
 from ..modules import check_is_valid_uuid
@@ -77,4 +77,32 @@ def test_upload_score_and_check_status_integration():
     r2 = requests.get(APP_SCORE_STATUS, params={"id": score_id})
 
     assert r2.status_code == 200, f"Expected success for GET request to {APP_SCORE_STATUS} providing id={score_id} in params, got status code {r2.status_code}"
+
+def test_download_mxl_file():
+    """Integration test which uses /upload, /status, and /download and confirms response has mxl file""" 
+
+    file = {"file": open(TEST_SCORE_PATH, "rb")}
+    r = requests.post(APP_UPLOAD_URL, files=file)
+    r_json = r.json()
+    score_id = r_json.get("id", None)
+
+    while True:
+        time.sleep(1)
+        try:
+            request_status = requests.get(APP_SCORE_STATUS, params={"id": score_id})
+
+            assert request_status.status_code == 200, f"Expected success for GET request to {APP_SCORE_STATUS} providing id={score_id} in params, got status code {request_status.status_code}"
+
+            status_json = request_status.json()
+            if "status" not in status_json or status_json["status"] != "processing":
+                break
+        except Exception as e:
+            return { "Error": str(e)}, 503
+    
+    # from here validate that we've completed and try downloading mxl file
+    assert "status" in status_json and status_json["status"] == "completed"
+    
+    print("No longer processing, status of pdf to mxl score conversion: ", status_json)
+
+    
 

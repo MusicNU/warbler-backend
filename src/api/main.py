@@ -11,6 +11,7 @@ app = flask.Flask(__name__)
 AWS_URL = os.getenv("AUDIVERIS_API_URL", "Failed to find AWS endpoint")
 AWS_UPLOAD_URL = AWS_URL + "/upload"
 AWS_SCORE_STATUS_URL = AWS_URL + "/status/"
+AWS_GET_MXL_URL = AWS_URL + "/download/"
 
 @app.route("/backend-health")
 def backend_health_check():
@@ -51,6 +52,24 @@ def get_score_status():
         r = requests.get(AWS_SCORE_STATUS_URL + str(score_id))
         print(f"Sent request to {r.url}")
         print(f"Resulting text: {r.text}")
+        try:
+            return r.json(), r.status_code
+        except:
+            return r.text, r.status_code
+    except Exception as e:
+        return {"Error": str(e)}, 503
+
+@app.route("/download")
+def download_score():
+    score_id = flask.request.args.get("id", None)
+    if score_id is None:
+        return "Key 'id' with score ID of a recently uploaded score is required to download the processed score", 400
+    
+    try:
+        r = requests.get(AWS_GET_MXL_URL + score_id)
+        
+        print(f"text gotten for /download: {r.text}")
+
         try:
             return r.json(), r.status_code
         except:
