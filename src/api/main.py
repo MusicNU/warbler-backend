@@ -96,3 +96,5 @@ def download_score():
         )
     except Exception as e:
         return {"Error": str(e)}, 503
+    
+@app.route()
