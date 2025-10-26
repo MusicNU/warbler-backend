@@ -7,7 +7,7 @@ from ..main import AWS_URL, AWS_UPLOAD_URL, APP_AWS_HEALTH_URL, APP_HEALTH_URL, 
 
 load_dotenv()
 
-TEST_MATERIALS_DIR = pathlib.Path(__file__).resolve().parent / "test_materials"
+TEST_MATERIALS_DIR = pathlib.Path(__file__).parent / "test_materials"
 TEST_SCORE_PATH = TEST_MATERIALS_DIR / "mozart.pdf"
 TEST_WAV_PATH = TEST_MATERIALS_DIR / "test.wav"
 

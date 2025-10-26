@@ -2,12 +2,17 @@ import flask
 import os
 import dotenv
 import requests
-import io
 import boto3
+import io
+import pathlib
+from datetime import datetime
 
 dotenv.load_dotenv()
 
 app = flask.Flask(__name__)
+
+# correct the path to the aws credentials file
+os.environ['AWS_SHARED_CREDENTIALS_FILE'] = str(pathlib.Path(__file__).parent.parent.parent / ".aws" / "credentials")
 
 # Endpoints for this API
 APP_URL = os.getenv("API_URL", "http://127.0.0.1:5000")
@@ -25,8 +30,11 @@ AWS_URL = os.getenv("AUDIVERIS_API_URL", "Failed to find AWS endpoint")
 AWS_UPLOAD_URL = AWS_URL + "/upload"
 AWS_SCORE_STATUS_URL = AWS_URL + "/status/"
 AWS_GET_MXL_URL = AWS_URL + "/download/"
+AWS_PROFILE_NAME = os.getenv("AWS_PROFILE_NAME", "AWS profile name does not exist")
+AWS_BUCKET = os.getenv("AWS_BUCKET", "Failed to get an AWS bucket")
 
-s3 = boto3.resource('s3')
+session = boto3.Session(profile_name=AWS_PROFILE_NAME)
+s3 = session.client('s3')
 
 @app.route("/app-health")
 def backend_health_check():
@@ -52,7 +60,9 @@ def upload_score():
         return "Key 'file' with file data is required to upload", 400
     try:
         uploaded_score = flask.request.files["file"]
-        files = {"file": (uploaded_score.filename or "score.pdf", uploaded_score.stream, uploaded_score.content_type or "application/pdf")}
+
+        alternate_name = f"{datetime.now()}.pdf"
+        files = {"file": (uploaded_score.filename or alternate_name, uploaded_score.stream, uploaded_score.content_type or "application/pdf")}
         r = requests.post(AWS_UPLOAD_URL, files=files)
         try:
             return r.json(), r.status_code
@@ -65,10 +75,15 @@ def upload_score():
 def upload_wav():
     """Uploads a WAV file to S3."""
 
-    for bucket in s3.buckets.all():
-        print(bucket.name)
-
-
+    if "file" not in flask.request.files:
+        return "Key 'file' with file data is required to upload", 400
+    try:
+        uploaded_wav = flask.request.files["file"]
+        file_name = uploaded_wav.filename or f"{datetime.now()}.wav"
+        s3.upload_fileobj(uploaded_wav, AWS_BUCKET, file_name)
+        return f"Successfully uploaded {file_name} to S3", 200
+    except Exception as e:
+        return {"Error": str(e)}, 503
 
 @app.route("/score-status")
 def get_score_status():
