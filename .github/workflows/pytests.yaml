@@ -27,8 +27,8 @@ jobs:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@main
       with:
-        role-to-assume: ${{ secrets.AUDIVERIS_API_URL }}
-        aws-region: ${{ secrets.AWS_GITHUB_ACTIONS_ARN }}
+        role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ARN }}
+        aws-region: ${{ secrets.AWS_REGION }}
     - name: Test AWS Credentials
       run: aws sts get-caller-identity
     - name: Set up Python 3.10
