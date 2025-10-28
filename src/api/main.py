@@ -33,8 +33,8 @@ AWS_GET_MXL_URL = AWS_URL + "/download/"
 AWS_PROFILE_NAME = os.getenv("AWS_PROFILE_NAME", "AWS profile name does not exist")
 AWS_BUCKET = os.getenv("AWS_BUCKET", "Failed to get an AWS bucket")
 
-session = boto3.Session(profile_name=AWS_PROFILE_NAME)
-s3 = session.client('s3')
+# session = boto3.Session(profile_name=AWS_PROFILE_NAME)
+# s3 = session.client('s3')
 
 @app.route("/app-health")
 def backend_health_check():
@@ -71,19 +71,19 @@ def upload_score():
     except Exception as e:
         return {"Error": str(e)}, 503
     
-@app.route("/upload/wav", methods=["POST"])
-def upload_wav():
-    """Uploads a WAV file to S3."""
+# @app.route("/upload/wav", methods=["POST"])
+# def upload_wav():
+#     """Uploads a WAV file to S3."""
 
-    if "file" not in flask.request.files:
-        return "Key 'file' with file data is required to upload", 400
-    try:
-        uploaded_wav = flask.request.files["file"]
-        file_name = uploaded_wav.filename or f"{datetime.now()}.wav"
-        s3.upload_fileobj(uploaded_wav, AWS_BUCKET, file_name)
-        return f"Successfully uploaded {file_name} to S3", 200
-    except Exception as e:
-        return {"Error": str(e)}, 503
+#     if "file" not in flask.request.files:
+#         return "Key 'file' with file data is required to upload", 400
+#     try:
+#         uploaded_wav = flask.request.files["file"]
+#         file_name = uploaded_wav.filename or f"{datetime.now()}.wav"
+#         s3.upload_fileobj(uploaded_wav, AWS_BUCKET, file_name)
+#         return f"Successfully uploaded {file_name} to S3", 200
+#     except Exception as e:
+#         return {"Error": str(e)}, 503
 
 @app.route("/download/mxl")
 def download_score():
