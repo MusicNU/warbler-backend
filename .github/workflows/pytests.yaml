@@ -16,7 +16,7 @@ env:
   AWS_PROFILE_NAME: ${{ secrets.AWS_PROFILE_NAME }}
   AWS_BUCKET: ${{ secrets.AWS_BUCKET }}
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  AWS_GITHUB_ACTIONS_ARN: ${{ secrets.AWS_GITHUB_ACTIONS_ARN }}
+  AWS_GITHUB_ACTIONS_ROLE: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE }}
 
 jobs:
   build:
@@ -27,7 +27,7 @@ jobs:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@main
       with:
-        role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ARN }}
+        role-to-assume: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE }}
         aws-region: ${{ secrets.AWS_REGION }}
     - name: Test AWS Credentials
       run: aws sts get-caller-identity
