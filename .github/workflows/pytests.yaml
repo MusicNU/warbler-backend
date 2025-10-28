@@ -1,4 +1,4 @@
-name: Python application
+name: Python unit tests over API and functions using Pytest
 
 on:
   push:
@@ -7,11 +7,16 @@ on:
     branches: [ "*" ]
 
 permissions:
+  id-token: write
   contents: read
 
 env:
   API_URL: ${{ secrets.API_URL }}
   AUDIVERIS_API_URL: ${{ secrets.AUDIVERIS_API_URL }}
+  AWS_PROFILE_NAME: ${{ secrets.AWS_PROFILE_NAME }}
+  AWS_BUCKET: ${{ secrets.AWS_BUCKET }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_GITHUB_ACTIONS_ARN: ${{ secrets.AWS_GITHUB_ACTIONS_ARN }}
 
 jobs:
   build:
@@ -46,6 +51,13 @@ jobs:
           kill $FLASK_PID || true
           exit 1
         fi
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@main
+      with:
+        role-to-assume: ${{ secrets.AUDIVERIS_API_URL }}
+        aws-region: ${{ secrets.AWS_GITHUB_ACTIONS_ARN }}
+    - name: Test AWS Credentials
+      run: aws sts get-caller-identity
     - name: Test with pytest
       run: |
         python -m pytest -q

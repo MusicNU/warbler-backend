@@ -85,32 +85,6 @@ def upload_wav():
     except Exception as e:
         return {"Error": str(e)}, 503
 
-@app.route("/score-status")
-def get_score_status():
-    """Check the status of a PREVIOUSLY uploaded score. 
-
-    Include the score's id (returned from upload endpoint) in the params
-    
-    The "status" key in the JSON response from the POST request indicates whether the processing is complete
-    - If `response['status'] == 'processing'` -> still processing
-    - If `response['status'] == 'completed'` -> finished processing, can now query download endpoint to retrieve file
-    - If `response['status'] == 'error'` -> some error occured, check the 'message' header
-    """
-    score_id = flask.request.args.get("id", None)
-    if score_id is None:
-        return "Key 'id' with score ID of a recently uploaded score is required to inspect the status (we don't know which score you want to check!)", 400
-
-    try:
-        r = requests.get(AWS_SCORE_STATUS_URL + str(score_id))
-        print(f"Sent request to {r.url}")
-        print(f"Resulting text: {r.text}")
-        try:
-            return r.json(), r.status_code
-        except:
-            return r.text, r.status_code
-    except Exception as e:
-        return {"Error": str(e)}, 503
-
 @app.route("/download/mxl")
 def download_score():
     """
@@ -146,6 +120,32 @@ def download_wav():
     if score_id is None:
         return "Key 'id' with score ID of a recently uploaded wav is required to download the processed wav", 400
     return "Not yet implemented", 501
+
+@app.route("/score-status")
+def get_score_status():
+    """Check the status of a PREVIOUSLY uploaded score. 
+
+    Include the score's id (returned from upload endpoint) in the params
+    
+    The "status" key in the JSON response from the POST request indicates whether the processing is complete
+    - If `response['status'] == 'processing'` -> still processing
+    - If `response['status'] == 'completed'` -> finished processing, can now query download endpoint to retrieve file
+    - If `response['status'] == 'error'` -> some error occured, check the 'message' header
+    """
+    score_id = flask.request.args.get("id", None)
+    if score_id is None:
+        return "Key 'id' with score ID of a recently uploaded score is required to inspect the status (we don't know which score you want to check!)", 400
+
+    try:
+        r = requests.get(AWS_SCORE_STATUS_URL + str(score_id))
+        print(f"Sent request to {r.url}")
+        print(f"Resulting text: {r.text}")
+        try:
+            return r.json(), r.status_code
+        except:
+            return r.text, r.status_code
+    except Exception as e:
+        return {"Error": str(e)}, 503
 
 @app.route("/analyze-performance", methods=["POST"])
 def analyze_performance():
