@@ -121,6 +121,4 @@ def test_upload_wav_endpoint():
 
     r = requests.post(APP_UPLOAD_WAV_URL, files=file)
 
-    assert r.status_code == 200, f"Expected success for POST request to {APP_UPLOAD_WAV_URL}, got status code {r.status_code}"
-
-    
+    assert r.status_code == 200, f"{r.json()}, {r.status_code} from {APP_UPLOAD_WAV_URL}"
