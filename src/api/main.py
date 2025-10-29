@@ -220,6 +220,7 @@ def analyze_performance():
     if not valid_uuid(mxl_id):
         return {"Error": f"Invalid UUID for mxl ID: {mxl_id}"}, 400
     
+    print("Passed checks, about to send requests to download endpoints...")
     try:
         r_wav = requests.get(APP_WAV_DOWNLOAD_URL, params={"id": wav_id})
         r_mxl = requests.get(APP_MXL_DOWNLOAD_URL, params={"id": mxl_id})
@@ -227,14 +228,23 @@ def analyze_performance():
         assert r_wav.status_code == 200, f"Expected 200 status code when downloading previously uploaded wav file, got {r_wav.status_code}"
         assert r_mxl.status_code == 200, f"Expected 200 status code when downloading previously uploaded mxl file, got {r_mxl.status_code}"
 
-        with open("temp_score.mxl", "wb") as f:
+        print("Download requests for wav an mxl succeeded. Storing files temporarily for analysis...")
+        with open("score.mxl", "wb") as f:
             f.write(r_mxl.content)
-        with open("stupid.txt", "w") as f:
-            f.write(r_mxl.text)
-        with open("temp_audio.wav", "wb") as f:
+        print("Wrote to score.mxl")
+        with open("performance.wav", "wb") as f:
             f.write(r_wav.content)
+        print("Wrote to performance.wav")
 
+        print("Performing analysis...")
+        # insert analysis
+        print("Size of score.mxl:", os.path.getsize("score.mxl"))
+        print("Size of performance.wav:", os.path.getsize("performance.wav"))
+
+        # cleanup files after
+        os.remove("score.mxl")
+        os.remove("performance.wav")
+
+        return "Dummy feedback", 200  
     except Exception as e:
         return {"Error": str(e)}, 503
-
-    return "good", 200
