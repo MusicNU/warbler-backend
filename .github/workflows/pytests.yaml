@@ -13,7 +13,7 @@ permissions:
 env:
   API_URL: ${{ secrets.API_URL }}
   AUDIVERIS_API_URL: ${{ secrets.AUDIVERIS_API_URL }}
-  AWS_PROFILE: ${{ secrets.AWS_PROFILE }}
+  # AWS_PROFILE: ${{ secrets.AWS_PROFILE }}
   AWS_BUCKET: ${{ secrets.AWS_BUCKET }}
   AWS_REGION: ${{ secrets.AWS_REGION }}
   AWS_GITHUB_ACTIONS_ROLE: ${{ secrets.AWS_GITHUB_ACTIONS_ROLE }}
