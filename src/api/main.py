@@ -6,6 +6,9 @@ import boto3
 import io
 import pathlib
 from datetime import datetime
+import uuid
+
+from .modules import valid_uuid, s3_object_exists
 
 dotenv.load_dotenv()
 
@@ -32,8 +35,26 @@ AWS_SCORE_STATUS_URL = AWS_URL + "/status/"
 AWS_GET_MXL_URL = AWS_URL + "/download/"
 AWS_BUCKET = os.getenv("AWS_BUCKET", "Failed to get an AWS bucket")
 
-session = boto3.Session()
-s3 = session.client('s3')
+# lazy S3 client, initialized on first use 
+s3 = None
+
+def get_s3_client():
+    """Lazily create and cache an S3 client using AWS_PROFILE ."""
+    global s3
+    if s3 is not None:
+        return s3
+
+    try:
+        # Try AWS_PROFILE first (from .env), then AWS_PROFILE (standard boto3 env var)
+        profile = os.getenv("AWS_PROFILE")
+        session = boto3.Session(profile_name=profile)
+        
+        s3 = session.client('s3')
+        return s3
+    except Exception as e:
+        print(f"Warning: Failed to create S3 client: {str(e)}")
+        print("You may not have AWS_PROFILE set correctly in your .env file")
+        return None
 
 @app.route("/app-health")
 def backend_health_check():
@@ -54,14 +75,15 @@ def upload_score():
     """Uploads score to Audiveris. The score will then enter the 'processing' phase, where it will be converted from a pdf to mxl file
     Expects a binary file in pdf format as input. The pdf is expected to be a score, otherwise the the download endpoint will likely fail
      
-       """
+    """
     if "file" not in flask.request.files:
         return "Key 'file' with file data is required to upload", 400
     try:
         uploaded_score = flask.request.files["file"]
 
-        alternate_name = f"{datetime.now()}.pdf"
-        files = {"file": (uploaded_score.filename or alternate_name, uploaded_score.stream, uploaded_score.content_type or "application/pdf")}
+        file_name = f"{uuid.uuid4()}.pdf"
+
+        files = {"file": (file_name, uploaded_score.stream, uploaded_score.content_type or "application/pdf")}
         r = requests.post(AWS_UPLOAD_URL, files=files)
         try:
             return r.json(), r.status_code
@@ -78,9 +100,16 @@ def upload_wav():
         return "Key 'file' with file data is required to upload", 400
     try:
         uploaded_wav = flask.request.files["file"]
-        file_name = uploaded_wav.filename or f"{datetime.now()}.wav"
-        s3.upload_fileobj(uploaded_wav, AWS_BUCKET, file_name)
-        return f"Successfully uploaded {file_name} to S3", 200
+        id = str(uuid.uuid4())
+        file_name = f"{id}.wav"
+
+        s3 = get_s3_client()
+        if s3 is None:
+            return {"Error": "Unable to locate credentials"}, 503
+        
+        s3.upload_fileobj(uploaded_wav.stream, AWS_BUCKET, file_name)
+        response = flask.jsonify({"id": id})
+        return response, 200
     except Exception as e:
         return {"Error": str(e)}, 503
 
@@ -95,6 +124,9 @@ def download_score():
     score_id = flask.request.args.get("id", None)
     if score_id is None:
         return "Key 'id' with score ID of a recently uploaded score is required to download the processed score", 400
+    
+    if not valid_uuid(score_id):
+        return {"Error": f"Invalid UUID for mxl ID: {score_id}"}, 400
     
     try:
         r = requests.get(AWS_GET_MXL_URL + score_id)
@@ -115,11 +147,30 @@ def download_wav():
     Note you must have used the upload endpoint to have uploaded the wav already
     The content body contains the binary for the wav file
     """
-    score_id = flask.request.args.get("id", None)
-    if score_id is None:
+    wav_id = flask.request.args.get("id", None)
+    if wav_id is None:
         return "Key 'id' with score ID of a recently uploaded wav is required to download the processed wav", 400
-    return "Not yet implemented", 501
 
+    if not valid_uuid(wav_id):
+        return {"Error": f"Invalid UUID for wav ID: {wav_id}"}, 400
+
+    s3 = get_s3_client()
+    if s3 is None:
+        return {"Error": "Unable to locate credentials"}, 503
+    
+    try:
+        file_name = f"{wav_id}.wav"
+        data = s3.get_object(Bucket=AWS_BUCKET, Key=file_name)['Body'].read()
+
+        return flask.send_file(
+            io.BytesIO(data),
+            as_attachment=True,
+            download_name=file_name,
+            mimetype="audio/wav"
+        )
+    except Exception as e:
+        return {"Error": str(e)}, 503
+    
 @app.route("/score-status")
 def get_score_status():
     """Check the status of a PREVIOUSLY uploaded score. 
@@ -134,6 +185,9 @@ def get_score_status():
     score_id = flask.request.args.get("id", None)
     if score_id is None:
         return "Key 'id' with score ID of a recently uploaded score is required to inspect the status (we don't know which score you want to check!)", 400
+    
+    if not valid_uuid(score_id):
+        return {"Error": f"Invalid UUID for mxl ID: {score_id}"}, 400
 
     try:
         r = requests.get(AWS_SCORE_STATUS_URL + str(score_id))
@@ -149,9 +203,38 @@ def get_score_status():
 @app.route("/analyze-performance", methods=["POST"])
 def analyze_performance():
     """
-    Takes in uploaded wav and mxl file and returns analysis of performance
+    Takes in id_wav and id_mxl and returns analysis of performance
     
     Kind of the the entire point of this API
+
+    Make sure that the pdf has been processed and converted to an mxl file! (check the score-status endpoint)
     """
-    # if "file" not in flask.request.files
-    return "Not yet implemented", 501
+    wav_id = flask.request.json.get("id_wav", None)
+    mxl_id = flask.request.json.get("id_mxl", None)
+
+    if wav_id is None or mxl_id is None:
+        return "Both 'id_wav' and 'id_mxl' are required in the body", 400
+
+    if not valid_uuid(wav_id):
+        return {"Error": f"Invalid UUID for wav ID: {wav_id}"}, 400
+    if not valid_uuid(mxl_id):
+        return {"Error": f"Invalid UUID for mxl ID: {mxl_id}"}, 400
+    
+    try:
+        r_wav = requests.get(APP_WAV_DOWNLOAD_URL, params={"id": wav_id})
+        r_mxl = requests.get(APP_MXL_DOWNLOAD_URL, params={"id": mxl_id})
+
+        assert r_wav.status_code == 200, f"Expected 200 status code when downloading previously uploaded wav file, got {r_wav.status_code}"
+        assert r_mxl.status_code == 200, f"Expected 200 status code when downloading previously uploaded mxl file, got {r_mxl.status_code}"
+
+        with open("temp_score.mxl", "wb") as f:
+            f.write(r_mxl.content)
+        with open("stupid.txt", "w") as f:
+            f.write(r_mxl.text)
+        with open("temp_audio.wav", "wb") as f:
+            f.write(r_wav.content)
+
+    except Exception as e:
+        return {"Error": str(e)}, 503
+
+    return "good", 200

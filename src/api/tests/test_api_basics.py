@@ -2,8 +2,8 @@ from dotenv import load_dotenv
 import os, time
 import requests
 import pathlib
-from ..modules import check_is_valid_uuid
-from ..main import AWS_URL, AWS_UPLOAD_URL, APP_AWS_HEALTH_URL, APP_HEALTH_URL, APP_UPLOAD_PDF_URL, APP_SCORE_STATUS_URL, APP_MXL_DOWNLOAD_URL, APP_UPLOAD_WAV_URL
+from ..modules import valid_uuid
+from ..main import AWS_URL, AWS_UPLOAD_URL, APP_AWS_HEALTH_URL, APP_HEALTH_URL, APP_UPLOAD_PDF_URL, APP_UPLOAD_WAV_URL, APP_SCORE_STATUS_URL, APP_MXL_DOWNLOAD_URL, APP_WAV_DOWNLOAD_URL, APP_ANALYZE_PERFORMANCE_URL
 
 load_dotenv()
 
@@ -51,7 +51,7 @@ def test_audiveris_post_correct():
 
     assert "id" in r_json.keys(), f"Expected response JSON to contain 'id' key, the keys are actually just {r_json.keys()}"
 
-    assert check_is_valid_uuid(r_json["id"]), f"Expected response value for key 'id' to be a valid UUID, got {r_json['id']} which is not valid uuid according to check_is_valid_uuid() function"
+    assert valid_uuid(r_json["id"]), f"Expected response value for key 'id' to be a valid UUID, got {r_json['id']} which is not valid uuid according to valid_uuid() function"
 
 def test_upload_score_and_check_status_integration():
     """Integration test for the upload_score and status function in src/api/main.py"""
@@ -67,11 +67,53 @@ def test_upload_score_and_check_status_integration():
 
     assert "id" in r_json.keys(), f"Expected response JSON to contain 'id' key, the keys are actually just {r_json.keys()}"
 
-    assert check_is_valid_uuid(score_id), f"Expected response value for key 'id' to be a valid UUID, got {score_id} which is not valid uuid according to check_is_valid_uuid() function"
+    assert valid_uuid(score_id), f"Expected response value for key 'id' to be a valid UUID, got {score_id} which is not valid uuid according to valid_uuid() function"
 
     r2 = requests.get(APP_SCORE_STATUS_URL, params={"id": score_id})
 
     assert r2.status_code == 200, f"Expected success for GET request to {APP_SCORE_STATUS_URL} providing id={score_id} in params, got status code {r2.status_code}"
+
+def test_upload_wav_endpoint():
+    """Integration test for the /upload/wav endpoint in src/api/main.py"""
+
+    file = {"file": open(TEST_WAV_PATH, "rb")}
+
+    r = requests.post(APP_UPLOAD_WAV_URL, files=file)
+
+    assert r.status_code == 200, f"{r.json()}, {r.status_code} from {APP_UPLOAD_WAV_URL}"
+
+    r_json = r.json()
+
+    assert "id" in r_json.keys(), f"Expected response JSON to contain 'id' key, the keys are actually just {r_json.keys()}"
+
+def test_download_wav_endpoint():
+    """Integration test for the /download/wav endpoint in src/api/main.py"""
+
+    # first upload a wav file
+    file = {"file": open(TEST_WAV_PATH, "rb")}
+
+    r = requests.post(APP_UPLOAD_WAV_URL, files=file)
+
+    assert r.status_code == 200, f"{r.json()}, {r.status_code} from {APP_UPLOAD_WAV_URL}"
+
+    r_json = r.json()
+
+    assert "id" in r_json.keys(), f"Expected response JSON to contain 'id' key, the keys are actually just {r_json.keys()}"
+
+    wav_id = r_json["id"]
+
+    # now try downloading the wav file
+    download_request = requests.get(APP_WAV_DOWNLOAD_URL, params={"id": wav_id})
+
+    try:
+        content_type = download_request.headers["Content-Type"]
+        content_disposition = download_request.headers["Content-Disposition"]
+
+        assert content_type == "audio/wav"
+
+        assert "attachment;" in content_disposition
+    except Exception as e:
+        assert False, f"Expected to successfully download wav file for wav id {wav_id}, but got error {str(e)}"
 
 def test_download_mxl_file():
     """Integration test which uses /upload, /status, and /download and confirms response has mxl file""" 
@@ -96,9 +138,9 @@ def test_download_mxl_file():
                 break
         except Exception as e:
             return { "Error": str(e)}, 503
-    
     # from here validate that we've completed and try downloading mxl file
-    assert "status" in status_json and status_json["status"] == "completed"
+    assert "status" in status_json, f"Expected response JSON from status endpoint to contain 'status' key, got keys {status_json.keys()}"
+    assert status_json["status"] == "completed", f"Expected status to be 'completed', got {status_json['status']}"  
     
     print("No longer processing, status of pdf to mxl score conversion: ", status_json)
 
@@ -112,13 +154,4 @@ def test_download_mxl_file():
 
         assert "attachment;" in content_disposition
     except Exception as e:
-        print(f"Error: {str(e)}")
-
-def test_upload_wav_endpoint():
-    """Integration test for the /upload/wav endpoint in src/api/main.py"""
-
-    file = {"file": open(TEST_WAV_PATH, "rb")}
-
-    r = requests.post(APP_UPLOAD_WAV_URL, files=file)
-
-    assert r.status_code == 200, f"{r.json()}, {r.status_code} from {APP_UPLOAD_WAV_URL}"
+        assert False, f"Expected to successfully download mxl file for score id {score_id}, but got error {str(e)}"
