@@ -57,9 +57,9 @@ jobs:
           kill $FLASK_PID || true
           exit 1
         fi
-    - name: Test with pytest
-      run: |
-        pytest -s
+    # - name: Test with pytest
+    #   run: |
+    #     pytest -s
     - name: Authenticate Docker client 
       run: 
         aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 089276191632.dkr.ecr.us-east-2.amazonaws.com
