@@ -14,9 +14,6 @@ dotenv.load_dotenv()
 
 app = flask.Flask(__name__)
 
-# correct the path to the aws credentials file
-os.environ['AWS_SHARED_CREDENTIALS_FILE'] = str(pathlib.Path(__file__).parent.parent.parent / ".aws" / "credentials")
-
 # Endpoints for this API
 APP_URL = os.getenv("API_URL", "http://127.0.0.1:5000")
 APP_AWS_HEALTH_URL = APP_URL + "/aws-health"
