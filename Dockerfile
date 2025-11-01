@@ -2,6 +2,10 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
+# needed to install Numpy, from docs: https://numpy.org/devdocs/building/
+RUN apt-get update
+RUN apt install -y gcc g++ gfortran libopenblas-dev liblapack-dev pkg-config python3-pip python3-dev
+
 COPY requirements.txt /app/
 
 RUN python -m pip install --upgrade pip

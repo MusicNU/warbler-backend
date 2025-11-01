@@ -59,4 +59,16 @@ jobs:
         fi
     - name: Test with pytest
       run: |
-        python -m pytest -q
+        pytest -s
+    - name: Authenticate Docker client 
+      run: 
+        aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 089276191632.dkr.ecr.us-east-2.amazonaws.com
+    - name: Build Docker image
+      run: 
+        docker build -t musicnu/warbler-backend .
+    - name: Tag image
+      run:  
+        docker tag musicnu/warbler-backend:latest 089276191632.dkr.ecr.us-east-2.amazonaws.com/musicnu/warbler-backend:latest
+    - name: Push image to ECR  
+    - run:
+        docker push 089276191632.dkr.ecr.us-east-2.amazonaws.com/musicnu/warbler-backend:latest
