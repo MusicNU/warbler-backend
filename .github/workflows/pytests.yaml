@@ -72,3 +72,4 @@ jobs:
     - name: Push image to ECR  
       run:
         docker push 089276191632.dkr.ecr.us-east-2.amazonaws.com/musicnu/warbler-backend:latest
+        
