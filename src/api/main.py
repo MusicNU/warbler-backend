@@ -4,11 +4,12 @@ import dotenv
 import requests
 import boto3
 import io
-import pathlib
 from datetime import datetime
 import uuid
 
-from .modules import valid_uuid, s3_object_exists
+from .modules import valid_uuid
+
+from ..dynamics.feedback import get_performance_feedback, Mismatch
 
 dotenv.load_dotenv()
 
@@ -238,10 +239,14 @@ def analyze_performance():
         print("Size of score.mxl:", os.path.getsize("score.mxl"))
         print("Size of performance.wav:", os.path.getsize("performance.wav"))
 
+        feedback: list[Mismatch] = get_performance_feedback("score.mxl", "performance.wav")
+        for fb in feedback:
+            print(f"At time {fb.time:.2f}s: expected {fb.expectedDB:.2f} dB, got {fb.actualDB:.2f} dB")
+
         # cleanup files after
         os.remove("score.mxl")
         os.remove("performance.wav")
 
-        return "Dummy feedback", 200  
+        return flask.jsonify({ "feedback": feedback }), 200
     except Exception as e:
         return {"Error": str(e)}, 503

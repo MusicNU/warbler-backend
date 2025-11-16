@@ -68,4 +68,3 @@ def test_analyze_performance():
         print(f"Analysis response: {analysis_response.text}")
     except Exception as e:
         assert False, f"Expected to successfully analyze performance using wav id {id_wav} and mxl id {score_id}, but got error {str(e)}"
-    

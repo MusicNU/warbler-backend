@@ -1,8 +1,20 @@
-import librosa, music21, numpy as np
+"""
+Performance feedback module for analyzing musical dynamics.
+Compares actual audio performance against sheet music dynamics markings.
+"""
+import librosa
+import music21
+import numpy as np
 from music21 import converter, dynamics, tempo
 from scipy.interpolate import interp1d
 from pathlib import Path
 
+class Mismatch:
+    time: float
+    expectedDB: float
+    actualDB: float
+
+# Mapping of dynamic markings to relative dB levels
 dynamic_to_rms: dict[str, int] = {
     "pp": -40, "p": -30, "mp": -25,
     "mf": -20, "f": -10, "ff": 0,
@@ -10,17 +22,33 @@ dynamic_to_rms: dict[str, int] = {
     "default": -20      # if no dynamic is given, default sets to -20db
 }   
 
-#if no tempo is provided in the score, default to 120bpm
+# Default tempo if none provided in score
 default_tempo: int = 120
 
-def load_audio(audio_path: str) -> tuple[np.ndarray, int]:
-    """Load audio file and calculate RMS."""
+def load_audio(audio_path: str | Path) -> tuple[np.ndarray, int]:
+    """
+    Load audio file and calculate RMS.
+    
+    Args:
+        audio_path: Path to audio file
+        
+    Returns:
+        Tuple of (rms_array, sample_rate)
+    """
     y, sample_rate = librosa.load(audio_path)
     rms = librosa.feature.rms(y=y)[0]
     return rms, sample_rate
 
 def get_dynamics(score: music21.stream.Score) -> list[tuple[float, str]]:
-    """Extract dynamics markings from score."""
+    """
+    Extract dynamics markings from score.
+    
+    Args:
+        score: music21 Score object
+        
+    Returns:
+        List of (offset, dynamic_value) tuples
+    """
     sheet_dynamics = []
     for element in score.flatten():
         if isinstance(element, dynamics.Dynamic):
@@ -95,18 +123,14 @@ def analyze_performance(rms: np.ndarray, expected_rms: list, time_points: list) 
     actual_db = librosa.amplitude_to_db(rms, ref=np.max)
     expected_db = librosa.amplitude_to_db(interpolated_expected_rms, ref=np.max)
 
-    feedback = []
+    feedback: list[Mismatch] = []
     for i, (act, exp) in enumerate(zip(actual_db, expected_db)):
         if abs(act - exp) > 5:  # Adjust tolerance
-            feedback.append(f"Mismatch at time {i / len(rms) * time_points[-1]:.2f}s: Expected {exp:.1f} dB, got {act:.1f} dB.")
 
+            feedback.append(Mismatch(time=i / len(rms) * time_points[-1], expectedDB=exp, actualDB=act))
     return feedback
 
-def main():
-    base = Path(__file__).parent
-    audio_path = base / "mxl_test_files" / "test7.wav"
-    sheet_music_path = base / "mxl_test_files" / "test7.mxl"
-
+def get_performance_feedback(sheet_music_path: str, audio_path: str) -> list[Mismatch]:
     rms, sample_rate = load_audio(audio_path)
     
     score = converter.parse(sheet_music_path)
@@ -116,9 +140,25 @@ def main():
     expected_rms, time_points = rms_note_by_note(score, dynamics_list, tempo_list, sample_rate)
     
     feedback = analyze_performance(rms, expected_rms, time_points)
-    
-    # Print results
-    print("\n".join(feedback))
+    return feedback
 
-if __name__ == "__main__":
-    main()
+# def main():
+#     base = Path(__file__).parent
+#     audio_path = base / "mxl_test_files" / "test7.wav"
+#     sheet_music_path = base / "mxl_test_files" / "test7.mxl"
+
+#     rms, sample_rate = load_audio(audio_path)
+    
+#     score = converter.parse(sheet_music_path)
+#     dynamics_list = get_dynamics(score)
+#     tempo_list = get_tempos(score)
+    
+#     expected_rms, time_points = rms_note_by_note(score, dynamics_list, tempo_list, sample_rate)
+    
+#     feedback = analyze_performance(rms, expected_rms, time_points)
+    
+#     # Print results
+#     print("\n".join(feedback))
+
+# if __name__ == "__main__":
+#     main()
