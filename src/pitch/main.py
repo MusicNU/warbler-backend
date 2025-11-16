@@ -1,6 +1,6 @@
 import librosa, music21, math, numpy as np
 from music21 import converter, tempo
-from compare_pitch import accuracy_check
+from .compare_pitch import accuracy_check
 from typing import Final
 
 DEFAULT_TEMPO: Final[int] = 120
@@ -14,6 +14,11 @@ HOP_LENGTH: Final[int] = 512
 
 RIGHT_NOTE_WINDOW: Final[float] = 1
 """window for the user to play the right note in seconds"""
+
+class PitchMismatch:
+    time: float
+    expected_pitch: float
+    actual_pitch: float
 
 def load_audio(audio_path: str) -> tuple[np.ndarray, int]:
     """Load audio file and it's sample rate"""
@@ -127,7 +132,7 @@ def integration():
     
     print(accuracy_check(f0[0], expected_pitches, right_note_hop_window))
 
-def pitch_check(audio_path: str, sheet_music_path: str) -> None:
+def pitch_check(audio_path: str, sheet_music_path: str) -> list[PitchMismatch]:
     """Given a path to the audio and sheet music, prints the number of times there's an error in playing"""
 
     y_sample_rate: tuple[np.ndarray, int] = load_audio(audio_path)         # get user recording's sample values and sample rate
@@ -140,9 +145,12 @@ def pitch_check(audio_path: str, sheet_music_path: str) -> None:
 
     # the indices of user recording (sampled at hop_length intervals) where the wrong note was played
     wrong_i = accuracy_check(f0, expected_pitches, right_note_hop_window, voiced_flag, y_sample_rate[1], HOP_LENGTH)
+
+    ret: list[PitchMismatch] = []
     for i in wrong_i:
-        actual_time = i * (HOP_LENGTH / y_sample_rate[1]) 
-        print(f'Wrong note played at time {actual_time}')
+        actual_time = i * (HOP_LENGTH / y_sample_rate[1])
+        ret.append(PitchMismatch(time=actual_time, expected_pitch=expected_pitches[i], actual_pitch=f0[i]))
+    return ret
 
 def main():
     audio_path = ".\\test_files\\test7.wav"

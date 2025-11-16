@@ -9,7 +9,7 @@ from music21 import converter, dynamics, tempo
 from scipy.interpolate import interp1d
 from pathlib import Path
 
-class Mismatch:
+class DynamicsMismatch:
     time: float
     expectedDB: float
     actualDB: float
@@ -123,14 +123,14 @@ def analyze_performance(rms: np.ndarray, expected_rms: list, time_points: list) 
     actual_db = librosa.amplitude_to_db(rms, ref=np.max)
     expected_db = librosa.amplitude_to_db(interpolated_expected_rms, ref=np.max)
 
-    feedback: list[Mismatch] = []
+    feedback: list[DynamicsMismatch] = []
     for i, (act, exp) in enumerate(zip(actual_db, expected_db)):
         if abs(act - exp) > 5:  # Adjust tolerance
 
-            feedback.append(Mismatch(time=i / len(rms) * time_points[-1], expectedDB=exp, actualDB=act))
+            feedback.append(DynamicsMismatch(time=i / len(rms) * time_points[-1], expectedDB=exp, actualDB=act))
     return feedback
 
-def get_performance_feedback(sheet_music_path: str, audio_path: str) -> list[Mismatch]:
+def get_dynamics_performance_feedback(sheet_music_path: str, audio_path: str) -> list[DynamicsMismatch]:
     rms, sample_rate = load_audio(audio_path)
     
     score = converter.parse(sheet_music_path)
