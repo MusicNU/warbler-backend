@@ -6,6 +6,7 @@ import boto3
 import io
 from datetime import datetime
 import uuid
+from flask_cors import CORS
 
 from .modules import valid_uuid
 
@@ -15,6 +16,7 @@ from ..pitch.main import pitch_check, PitchMismatch
 dotenv.load_dotenv()
 
 app = flask.Flask(__name__)
+CORS(app)
 
 # Endpoints for this API
 APP_URL = os.getenv("API_URL", "http://127.0.0.1:5000")
@@ -43,12 +45,17 @@ def get_s3_client():
     if s3 is not None:
         return s3
 
+    execution_env = os.getenv("AWS_EXECUTION_ENV", "")
+    
     try:
-        # Try AWS_PROFILE first (from .env), then AWS_PROFILE (standard boto3 env var)
-        profile = os.getenv("AWS_PROFILE")
-        session = boto3.Session(profile_name=profile)
-        
-        s3 = session.client('s3')
+        if "app_runner" in execution_env:
+            session = boto3.Session()
+            s3 = session.client('s3')
+        else:
+            # Try AWS_PROFILE first (from .env), then AWS_PROFILE (standard boto3 env var)
+            profile = os.getenv("AWS_PROFILE")
+            session = boto3.Session(profile_name=profile)
+            s3 = session.client('s3')
         return s3
     except Exception as e:
         print(f"Warning: Failed to create S3 client: {str(e)}")
@@ -207,6 +214,20 @@ def analyze_performance():
     Kind of the the entire point of this API
 
     Make sure that the pdf has been processed and converted to an mxl file! (check the score-status endpoint)
+
+    The response JSON contains two keys: "dynamics_feedback" and "pitch_feedback", each containing a list of PitchMismatch or DynamicsMismatch feedback objects
+
+    They are defined as:
+
+    class DynamicsMismatch:
+        time: float
+        expectedDB: float
+        actualDB: float
+
+    class PitchMismatch:
+        time: float
+        expected_pitch: float
+        actual_pitch: float
     """
     wav_id = flask.request.json.get("id_wav", None)
     mxl_id = flask.request.json.get("id_mxl", None)

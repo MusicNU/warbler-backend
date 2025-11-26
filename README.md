@@ -19,7 +19,20 @@ Backend API endpoints and processing algorithms for Warbler.
    ```
 4. Run the Flask application:
    ```
-   flask --app src/api/main.py --debug run
+   flask --app src.api.main.py --debug run
+   ```
+5. Set up aws cli with your credentials:
+   ```
+   aws configure sso
+   ```
+6. Find your profile:
+   ```
+   aws configure list-profiles
+   ```
+
+8. Authenticate your SSO provider:
+   ```
+   aws sso login --profile your-profile-name
    ```
 
 ## Running unit tests
