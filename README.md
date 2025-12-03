@@ -1,6 +1,8 @@
 # warbler-backend
 Backend API endpoints and processing algorithms for Warbler. 
 
+The API provides a means to upload pdf files and convert them to xml files, which can be paired with corresonding recordings to analyze performance.
+
 ## Requirements
 - Python 3.10+
 - An .env file with the following variables:
